@@ -32,4 +32,4 @@ dependencies {
     compileOnly deps.android.annotation
 }
 
-apply from: publishScript
+//apply from: publishScript

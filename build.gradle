@@ -3,12 +3,18 @@ apply from: 'config.gradle'
 buildscript {
     repositories {
         mavenLocal()
-        google()
+        maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/' } // 腾讯镜像
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://jitpack.io' }
+        google()  // 阿里云对于有些库会有丢失，加入进行兜底
         mavenCentral()
+        gradlePluginPortal()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.2.2'
+        classpath 'com.android.tools.build:gradle:7.3.0'
         classpath 'com.yanzhenjie.andserver:plugin:2.1.12'
     }
 }
@@ -16,7 +22,11 @@ buildscript {
 allprojects {
     repositories {
         mavenLocal()
-        google()
+        maven { url 'https://maven.aliyun.com/repository/public' } // central 和 jcenter 的聚合仓
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://jitpack.io' }
+        maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/' }   // 腾讯镜像
+        google()  // 阿里云对于有些库会有丢失，加入进行兜底
         mavenCentral()
     }
 }

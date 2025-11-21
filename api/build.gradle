@@ -1,6 +1,7 @@
 apply plugin: plugin.androidLibrary
 
 android {
+    namespace 'com.yanzhenjie.andserver'
     compileSdkVersion androidBuild.compileSdkVersion
 
     defaultConfig {
@@ -21,6 +22,10 @@ android {
         debug {
             buildConfigField "java.lang.String", "PROJECT_VERSION", "\"${POM_VERSION}\""
         }
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 }
 

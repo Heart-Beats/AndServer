@@ -1,3 +1,5 @@
+apply from: './commonGradle/gradle_config_optimize.gradle'
+
 include ':annotation'
 include ':api'
 include ':processor'

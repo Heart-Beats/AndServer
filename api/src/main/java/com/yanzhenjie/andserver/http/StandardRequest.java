@@ -40,6 +40,7 @@ import org.apache.httpcore.HttpEntity;
 import org.apache.httpcore.HttpEntityEnclosingRequest;
 import org.apache.httpcore.RequestLine;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -78,6 +79,8 @@ public class StandardRequest implements HttpRequest {
 
     private MultiValueMap<String, String> mParameter;
     private boolean isParsedParameter;
+
+    private RequestBody mCachedBody; // 缓存请求体对象
 
     public StandardRequest(org.apache.httpcore.HttpRequest request, HttpContext context, DispatcherHandler handler,
                            SessionManager sessionManager) {
@@ -456,6 +459,10 @@ public class StandardRequest implements HttpRequest {
     @Nullable
     @Override
     public RequestBody getBody() {
+        if (mCachedBody != null) {
+            return mCachedBody;
+        }
+
         if (getMethod().allowBody()) {
             if (mRequest instanceof HttpEntityEnclosingRequest) {
                 HttpEntityEnclosingRequest request = (HttpEntityEnclosingRequest) mRequest;
@@ -463,7 +470,10 @@ public class StandardRequest implements HttpRequest {
                 if (entity == null) {
                     return null;
                 }
-                return new EntityToBody(entity);
+
+                // 创建并缓存 RequestBody 对象
+                mCachedBody = new EntityToBody(entity);
+                return mCachedBody;
             }
             return null;
         }
@@ -583,7 +593,9 @@ public class StandardRequest implements HttpRequest {
 
     private static class EntityToBody implements RequestBody {
 
-        private HttpEntity mEntity;
+        private final HttpEntity mEntity;
+
+        private byte[] mCachedData; // 用于缓存数据的字节数组
 
         private EntityToBody(HttpEntity entity) {
             this.mEntity = entity;
@@ -591,7 +603,7 @@ public class StandardRequest implements HttpRequest {
 
         @Override
         public String contentEncoding() {
-            Header encoding = mEntity.getContentType();
+            Header encoding = mEntity.getContentEncoding(); // 注意这里修复了一个bug，之前错误地获取了ContentType
             return encoding == null ? "" : encoding.getValue();
         }
 
@@ -615,11 +627,30 @@ public class StandardRequest implements HttpRequest {
         @NonNull
         @Override
         public InputStream stream() throws IOException {
-            InputStream stream = mEntity.getContent();
-            if (contentEncoding().toLowerCase().contains("gzip")) {
-                stream = new GZIPInputStream(stream);
+            if (mCachedData != null) {
+                return new ByteArrayInputStream(mCachedData);
             }
-            return stream;
+
+            InputStream stream = null;
+            try {
+                stream = mEntity.getContent();
+                if (stream == null) {
+                    return new ByteArrayInputStream(new byte[0]);
+                }
+                if (contentEncoding().toLowerCase().contains("gzip")) {
+                    stream = new GZIPInputStream(stream);
+                }
+
+                mCachedData = IOUtils.toByteArray(stream);
+                // 返回新的ByteArrayInputStream
+                return new ByteArrayInputStream(mCachedData);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return new ByteArrayInputStream(new byte[0]);
+            } finally {
+                // 确保原始流被关闭
+                IOUtils.closeQuietly(stream);
+            }
         }
 
         @NonNull
